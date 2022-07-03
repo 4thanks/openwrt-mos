@@ -47,10 +47,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get v2ray-geodata
-        run: |
-          git clone https://github.com/sbwml/v2ray-geodata
-
       - name: Building packages
         uses: openwrt/gh-action-sdk@v5
         env:
