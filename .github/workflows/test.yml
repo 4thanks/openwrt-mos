@@ -1,0 +1,57 @@
+name: testBuild
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - arm_cortex-a7_neon-vfpv4
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Building packages
+        uses: openwrt/gh-action-sdk@v5
+        env:
+          ARCH: ${{ matrix.arch }}-master
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-mosdns mosdns
+          NO_REFRESH_CHECK: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.arch }}
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Move created packages to project dir
+        run: |
+          cp bin/packages/${{ matrix.arch }}/packages_ci/*.ipk . || true
+
+      - name: Store packages
+        uses: actions/upload-artifact@v2
+        if: github.event_name != 'release'
+        with:
+          name: ${{ matrix.arch}}-${{ github.sha}}-packages
+          path: "*.ipk"
+
+      - name: Upload packages
+        uses: svenstaro/upload-release-action@v2
+        if: github.event_name == 'release'
+        with:
+          repo_token: ${{ secrets.workflow_token }}
+          file: "*.ipk"
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
